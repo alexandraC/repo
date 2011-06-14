@@ -31,8 +31,9 @@ struct {
 	{"html","text/html" },  
 	{0,0} };
 
-var totalThread = 0;
-
+var totalThread = 10; /* 10 threads */
+pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
+var availableThreads =0;
 void log(int type, char *s1, char *s2, int num)
 {
 	int fd ;
@@ -59,6 +60,8 @@ void log(int type, char *s1, char *s2, int num)
 /* this is a child web server process, so we can exit on errors */
 void web(int fd, int hit)
 {
+	pthread_mutex_lock( &mutex1 );
+	availableThreads -=1;
 	int j, file_fd, buflen, len;
 	long i, ret;
 	char * fstr;
@@ -121,6 +124,8 @@ void web(int fd, int hit)
 #ifdef LINUX
 	sleep(1);	/* to allow socket to drain */
 #endif
+	availableThreads+=1;
+	pthread_mutex_unlock( &mutex1 );
 	exit(1);
 }
 
@@ -161,17 +166,15 @@ int main(int argc, char **argv)
 		exit(4);
 	}
 
-	/* Become deamon + unstopable and no zombies children (= no wait()) */
-	if(totalThread > 0)
-	{ 
-		pthread_t idHilo;
+	/* Create thread--------------------------------------------------- */
+	for(i=1;i<=totalThread;i++)
+	{
+		pthread_t idHilo+;
+		pthread_create(pthread_t &idHilo+i, NULL, web ,(void *) socketfd,hit);
 		totalThread -= 1;
-		pthread_create(&idHilo, NULL, web(socketfd,hit), NULL);
+		availableThreads +=1;
 	}
-	if(fork() != 0)
-		return 0; /* parent returns OK to shell */
-	(void)signal(SIGCLD, SIG_IGN); /* ignore child death */
-	(void)signal(SIGHUP, SIG_IGN); /* ignore terminal hangups */
+	
 	for(i=0;i<32;i++)
 		(void)close(i);		/* close open files */
 	(void)setpgrp();		/* break away from process group */
