@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #define BUFSIZE 8096
 #define ERROR 42
@@ -29,6 +30,8 @@ struct {
 	{"htm", "text/html" },  
 	{"html","text/html" },  
 	{0,0} };
+
+var totalThread = 0;
 
 void log(int type, char *s1, char *s2, int num)
 {
@@ -159,6 +162,12 @@ int main(int argc, char **argv)
 	}
 
 	/* Become deamon + unstopable and no zombies children (= no wait()) */
+	if(totalThread > 0)
+	{ 
+		pthread_t idHilo;
+		totalThread -= 1;
+		pthread_create(&idHilo, NULL, web(socketfd,hit), NULL);
+	}
 	if(fork() != 0)
 		return 0; /* parent returns OK to shell */
 	(void)signal(SIGCLD, SIG_IGN); /* ignore child death */
